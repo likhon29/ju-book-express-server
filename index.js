@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
@@ -19,6 +19,55 @@ const client = new MongoClient(uri, {
   useUnifiedTopology: true,
   serverApi: ServerApiVersion.v1,
 });
+
+async function run() {
+  try {
+    const categoryCollections = client
+      .db("JUBookExpress")
+      .collection("categoryCollections");
+    const usersCollection = client
+      .db("JUBookExpress")
+      .collection("usersCollection");
+
+    app.get("/allCategories", async (req, res) => {
+      const query = {};
+      const result = await categoryCollections.find(query).toArray();
+      res.send(result);
+    });
+
+    app.get('/allCategories/:id', async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: ObjectId(id) };
+        const category = await categoryCollections.findOne(query);
+        res.send(category);
+    })
+    app.get("/categoryName", async (req, res) => {
+      const query = {};
+      const result = await categoryCollections
+        .find(query)
+        .project({ category_name: 1 })
+        .toArray();
+      res.send(result);
+    });
+
+    app.get('/users', async (req, res) => {
+        const query = {};
+        const users = await usersCollection.find(query).toArray();
+        res.send(users);
+    });
+      
+    app.post('/users', async (req, res) => {
+        const user = req.body;
+        console.log(user);
+        // TODO: make sure you do not enter duplicate user email
+        // only insert users if the user doesn't exist in the database
+        const result = await usersCollection.insertOne(user);
+        res.send(result);
+    });
+  } finally {
+  }
+}
+run().catch((err) => console.log(err));
 
 app.get("/", (req, res) => {
   res.send("JU Book Express on going ....");

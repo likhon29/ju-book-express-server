@@ -1,6 +1,6 @@
 [
     {
-        "id":"1",
+        
         "category_name":"Job Preparation Book",
         "Books":[
             {
@@ -43,7 +43,7 @@
         ]
     },
     {
-        "id":"2",
+        
         "category_name":"English Novel Book",
         "Books":[
             {
@@ -86,7 +86,7 @@
         ]
     },
     {
-        "id":"3",
+        
         "category_name":"University Academic Book",
         "Books":[
             {
