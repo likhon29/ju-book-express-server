@@ -63,6 +63,30 @@ async function run() {
       .db("JUBookExpress")
       .collection("bookingsCollection");
 
+    // verify admin seller buyer
+
+    const verifyAdmin = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const query = { email: decodedEmail };
+      const user = await usersCollection.findOne(query);
+
+      if (user?.role !== "admin") {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
+    const verifySeller = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const query = { email: decodedEmail };
+      const user = await usersCollection.findOne(query);
+
+      if (user?.role !== "seller") {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      next();
+    };
+
     
 // Category name show in home
     app.get("/categoryName", async (req, res) => {
@@ -76,8 +100,7 @@ async function run() {
       res.send(unique);
     });
 
-    // jwt
-
+    
     
     app.get("/users", async (req, res) => {
       const query = {};
@@ -127,7 +150,7 @@ async function run() {
       res.send(user);
     });
 
-
+// jwt
     app.get('/jwt', async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
