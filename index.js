@@ -421,7 +421,46 @@ async function run() {
     });
 
 
-  
+    app.post('/create-payment-intent', async (req, res) => {
+      const booking = req.body;
+      const price = booking.price;
+      const amount = price * 100;
+
+      const paymentIntent = await stripe.paymentIntents.create({
+          currency: 'usd',
+          amount: amount,
+          "payment_method_types": [
+              "card"
+          ]
+      });
+      res.send({
+          clientSecret: paymentIntent.client_secret,
+      });
+  });
+
+    app.post('/payments', async (req, res) =>{
+      const payment = req.body;
+      console.log(payment);
+      const result = await paymentsCollection.insertOne(payment);
+      const id = payment.bookingId
+      const filter = { _id: id }
+      console.log(filter);
+      // const updatedDoc = {
+      //     $set: {
+      //         paid: true,
+      //         transactionId: payment.transactionId
+      //     }
+      // }
+      // const updatedResult = await bookingsCollection.updateOne(filter, updatedDoc)
+      // const updatedDoc1 = {
+      //   $set: {
+      //       productStatus: 'sold',
+      //       isAdvertised: 'no',
+      //   }
+      // }
+      // const updatedResult1 = await productsCollection.updateOne(filter, updatedDoc1)
+      res.send(result);
+  })
   } finally {
   }
 }
