@@ -63,8 +63,6 @@ async function run() {
       .db("JUBookExpress")
       .collection("bookingsCollection");
 
-    // verify admin seller buyer
-
     const verifyAdmin = async (req, res, next) => {
       const decodedEmail = req.decoded.email;
       const query = { email: decodedEmail };
@@ -87,7 +85,6 @@ async function run() {
       next();
     };
 
-    
 // Category name show in home
     app.get("/categoryName", async (req, res) => {
       const query = {};
@@ -100,6 +97,18 @@ async function run() {
       res.send(unique);
     });
 
+    // jwt
+
+    app.get('/jwt', async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      if (user) {
+          const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '1h' })
+          return res.send({ accessToken: token });
+      }
+      res.status(403).send({ accessToken: '' })
+    });
     
     
     app.get("/users", async (req, res) => {
@@ -150,18 +159,259 @@ async function run() {
       res.send(user);
     });
 
-// jwt
-    app.get('/jwt', async (req, res) => {
-      const email = req.query.email;
-      const query = { email: email };
-      const user = await usersCollection.findOne(query);
-      if (user) {
-          const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '1h' })
-          return res.send({ accessToken: token });
-      }
-      res.status(403).send({ accessToken: '' })
+// Show all buyer for admin
+    app.get("/allBuyers", async (req, res) => {
+      const role = req.query.role;
+      const query = {
+        role: role,
+      };
+      const allBuyers = await usersCollection.find(query).toArray();
+      res.send(allBuyers);
     });
+
+    // show all seller for admin
+    app.get("/allSellers", async (req, res) => {
+      const role = req.query.role;
+      const query = {
+        role: role,
+      };
+      const allSellers = await usersCollection.find(query).toArray();
+      res.send(allSellers);
+    });
+
+    // my buyer for a seller
+    app.get("/myBuyers", async (req, res) => {
+      const seller_email = req.query.email;
+      const query = {
+        seller_email: seller_email,
+      };
+      const myBuyers = await bookingsCollection.find(query).toArray();
+      res.send(myBuyers);
+    });
+//  a particular bookings for buyer
+    app.get("/bookings/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: id };
+      const booking = await bookingsCollection.findOne(query);
+      res.send(booking);
+    });
+// all orders for a buyer
+    app.get("/bookings", async (req, res) => {
+      const email = req.query.email;
+      const query = { buyerEmail: email };
+      console.log(query);
+      const booking = await bookingsCollection.find(query).toArray();
+      res.send(booking);
+    });
+    // booking a product for a buyer
+    app.post("/bookings", async (req, res) => {
+      const booking = req.body;
+      const query = {
+        book_id: booking.book_id,
+        buyerName: booking.buyerName,
+      };
+      const alreadyBooked = await bookingsCollection.find(query).toArray();
+      if (alreadyBooked.length) {
+        const message = `Already  you have booked this book .Please try another one`;
+        return res.send({ acknowledged: false, message });
+      }
+      const result = await bookingsCollection.insertOne(booking);
+      res.send(result);
+    });
+
+
     
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      console.log(user);
+      const query = {
+        // buyerEmail: booking.buyerEmail,
+        email: user.email,
+      };
+
+      const alreadySaved = await usersCollection.find(query).toArray();
+
+      if (alreadySaved.length) {
+        // const message = `You already have booked this book`;
+        return res.send({ acknowledged: false });
+      }
+      // TODO: make sure you do not enter duplicate user email
+      // only insert users if the user doesn't exist in the database
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
+
+    app.put("/users/admin/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          role: "admin",
+        },
+      };
+      const result = await usersCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
+    app.delete("/users/admin/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await usersCollection.deleteOne(query);
+      res.send(result);
+    });
+   
+
+    // temporary to update product status field on products collection
+    // app.get('/addProductStatus', async (req, res) => {
+    //     const filter = {}
+    //     const options = { upsert: true }
+    //     const updatedDoc = {
+    //         $set: {
+    //             productStatus: 'available',
+    //             isAdvertised: "no",
+    //         }
+    //     }
+    //     const result = await productsCollection.updateMany(filter, updatedDoc, options);
+    //     res.send(result);
+    // })
+    app.get("/products", async (req, res) => {
+      const isAdvertised = req.query.isAdvertised;
+      const query = { isAdvertised: isAdvertised };
+      const products = await productsCollection.find(query).toArray();
+      res.send(products);
+    });
+    app.get("/admin/reportedProducts", async (req, res) => {
+      const isReported = req.query.isReported;
+      const query = { isReported: isReported };
+      const products = await productsCollection.find(query).toArray();
+      res.send(products);
+    });
+    app.delete("/admin/reportedProducts", async (req, res) => {
+      const isReported = req.query.isReported;
+      const query = { isReported: isReported };
+      const products = await productsCollection.find(query).toArray();
+      res.send(products);
+    });
+    app.post("/addProducts", async (req, res) => {
+      const product = req.body;
+      console.log(product);
+      // TODO: make sure you do not enter duplicate user email
+      // only insert users if the user doesn't exist in the database
+      const result = await productsCollection.insertOne(product);
+      res.send(result);
+    });
+
+    app.put("/addToReportedItem/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          isReported: "yes",
+        },
+      };
+      const result = await productsCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
+
+    app.get("/seller/myProduct/:id", async (req, res) => {
+      const id = req.params.id;
+      // console.log(id);
+      // const decodedEmail = req.decoded.email;
+
+      // if (email !== decodedEmail) {
+      //     return res.status(403).send({ message: 'forbidden access' });
+      // }
+
+      const query = { _id: ObjectId(id) };
+
+      const result = await productsCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.patch("/seller/myProduct/:id", async (req, res) => {
+      const id = req.params.id;
+      // console.log(id);
+      // const decodedEmail = req.decoded.email;
+
+      // if (email !== decodedEmail) {
+      //     return res.status(403).send({ message: 'forbidden access' });
+      // }
+
+      const filter = { _id: ObjectId(id) };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          // productStatus: 'sold',
+          isAdvertised: "yes",
+        },
+      };
+      const result = await productsCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
+
+    app.get("/myProducts", async (req, res) => {
+      const email = req.query.email;
+      // console.log(email);
+      // const decodedEmail = req.decoded.email;
+
+      // if (email !== decodedEmail) {
+      //     return res.status(403).send({ message: 'forbidden access' });
+      // }
+
+      const query = { seller_email: email };
+
+      const products = await productsCollection.find(query).toArray();
+      // console.log(products);
+      res.send(products);
+    });
+
+
+    app.delete("/admin/reportedProducts/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await productsCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    app.get("/v2/category/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { cid: id };
+      const result = await productsCollection.findOne(query);
+      res.send(result);
+    });
+
+    // app.get("/category/:id", async (req, res) => {
+    //   const id = req.params.id;
+    //   const query = { _id: ObjectId(id) };
+    //   const category = await categoryCollections.findOne(query);
+    //   res.send(category);
+    // });
+
+    // temporary to update status field on user collection
+    // app.get('/addStatus', async (req, res) => {
+    //     const filter = {role:'seller'}
+    //     const options = { upsert: true }
+    //     const updatedDoc = {
+    //         $set: {
+    //             status: 'unverified'
+    //         }
+    //     }
+    //     const result = await usersCollection.updateMany(filter, updatedDoc, options);
+    //     res.send(result);
+    // })
 
     app.get("/category/:category", async (req, res) => {
       const category = req.params.category;
@@ -171,67 +421,7 @@ async function run() {
     });
 
 
-   // Show all buyer for admin
-   app.get("/allBuyers", async (req, res) => {
-    const role = req.query.role;
-    const query = {
-      role: role,
-    };
-    const allBuyers = await usersCollection.find(query).toArray();
-    res.send(allBuyers);
-  });
-
-  // show all seller for admin
-  app.get("/allSellers", async (req, res) => {
-    const role = req.query.role;
-    const query = {
-      role: role,
-    };
-    const allSellers = await usersCollection.find(query).toArray();
-    res.send(allSellers);
-  });
-
-  // my buyer for a seller
-  app.get("/myBuyers", async (req, res) => {
-    const seller_email = req.query.email;
-    const query = {
-      seller_email: seller_email,
-    };
-    const myBuyers = await bookingsCollection.find(query).toArray();
-    res.send(myBuyers);
-  });
-//  a particular bookings for buyer
-  app.get("/bookings/:id", async (req, res) => {
-    const id = req.params.id;
-    const query = { _id: id };
-    const booking = await bookingsCollection.findOne(query);
-    res.send(booking);
-  });
-// all orders for a buyer
-  app.get("/bookings", async (req, res) => {
-    const email = req.query.email;
-    const query = { buyerEmail: email };
-    console.log(query);
-    const booking = await bookingsCollection.find(query).toArray();
-    res.send(booking);
-  });
-  // booking a product for a buyer
-  app.post("/bookings", async (req, res) => {
-    const booking = req.body;
-    const query = {
-      book_id: booking.book_id,
-      buyerName: booking.buyerName,
-    };
-    const alreadyBooked = await bookingsCollection.find(query).toArray();
-    if (alreadyBooked.length) {
-      const message = `Already  you have booked this book .Please try another one`;
-      return res.send({ acknowledged: false, message });
-    }
-    const result = await bookingsCollection.insertOne(booking);
-    res.send(result);
-  });
-
-    
+  
   } finally {
   }
 }
