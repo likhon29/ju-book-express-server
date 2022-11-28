@@ -171,7 +171,66 @@ async function run() {
     });
 
 
-   
+   // Show all buyer for admin
+   app.get("/allBuyers", async (req, res) => {
+    const role = req.query.role;
+    const query = {
+      role: role,
+    };
+    const allBuyers = await usersCollection.find(query).toArray();
+    res.send(allBuyers);
+  });
+
+  // show all seller for admin
+  app.get("/allSellers", async (req, res) => {
+    const role = req.query.role;
+    const query = {
+      role: role,
+    };
+    const allSellers = await usersCollection.find(query).toArray();
+    res.send(allSellers);
+  });
+
+  // my buyer for a seller
+  app.get("/myBuyers", async (req, res) => {
+    const seller_email = req.query.email;
+    const query = {
+      seller_email: seller_email,
+    };
+    const myBuyers = await bookingsCollection.find(query).toArray();
+    res.send(myBuyers);
+  });
+//  a particular bookings for buyer
+  app.get("/bookings/:id", async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: id };
+    const booking = await bookingsCollection.findOne(query);
+    res.send(booking);
+  });
+// all orders for a buyer
+  app.get("/bookings", async (req, res) => {
+    const email = req.query.email;
+    const query = { buyerEmail: email };
+    console.log(query);
+    const booking = await bookingsCollection.find(query).toArray();
+    res.send(booking);
+  });
+  // booking a product for a buyer
+  app.post("/bookings", async (req, res) => {
+    const booking = req.body;
+    const query = {
+      book_id: booking.book_id,
+      buyerName: booking.buyerName,
+    };
+    const alreadyBooked = await bookingsCollection.find(query).toArray();
+    if (alreadyBooked.length) {
+      const message = `Already  you have booked this book .Please try another one`;
+      return res.send({ acknowledged: false, message });
+    }
+    const result = await bookingsCollection.insertOne(booking);
+    res.send(result);
+  });
+
     
   } finally {
   }
