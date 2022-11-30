@@ -136,6 +136,7 @@ async function run() {
         updatedDoc,
         options
       );
+      
       res.send(result);
     });
 
@@ -154,7 +155,7 @@ async function run() {
     // jwt
 
     // Show all buyer for admin
-    app.get("/allBuyers", verifyJWT, verifyAdmin, async (req, res) => {
+    app.get("/allBuyers", async (req, res) => {
       const role = req.query.role;
       const query = {
         role: role,
